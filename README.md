@@ -176,6 +176,10 @@ Don't change the version numbers. If you have to change the them, do it in a sep
 
 ### Revisions
 
+1.2.4 (Nov. 11, 2023)
+* Added the ability to print out the upper and lower lines based on the bank number of the matched credit card, which can quickly determine whether it is a real card number.
+* Added -n to exclude certain file suffixes from scanning, such as -n.so,.a
+
 1.2.3 (Oct. 8, 2012):
 
 * Added Windows installation instructions
