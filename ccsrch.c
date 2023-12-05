@@ -30,6 +30,11 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include "ccsrch.h"
+#include  <fcntl.h>   
+#include  <sys/wait.h> 
+#include  <termios.h> 
+
+
 
 char           *logfilename = NULL;
 char           *currfilename = NULL;
@@ -51,6 +56,12 @@ int             tracktype2=0;
 int             trackdatacount=0;
 char            lastfilename[MAXPATH];
 int             filename_pan_count=0;
+// add by hwz
+char  *exclude_extensions;
+char  *ignore               = NULL;
+
+#define INPUT_END 1                           
+#define OUTPUT_END 0 
 
 void
 initialize_buffer()
@@ -58,6 +69,47 @@ initialize_buffer()
   int   i=0;
   for (i=0; i<CARDSIZE; i++)
     cardbuf[i]=0;
+}
+
+
+/*
+* add by hwz
+* 该函数的功能是加白误报的卡号信息；比如某些号码被识别成卡号，下次扫描不想再被扫描出来，就将卡号放在 ignore.list文件中，扫描的时候加 -i ignore.list
+*
+*/
+char *read_ignore_list(const char *filename, size_t *len)
+{
+  char  *buf;
+  FILE  *infile;
+
+  infile = fopen(filename, "r");
+  if (!infile)
+    return NULL;
+
+  fseek(infile, 0, SEEK_END);
+  *len = ftell(infile);
+  fseek(infile, 0, SEEK_SET);
+  buf = malloc(*len+1);
+  if (buf == NULL)
+    return NULL;
+
+  if (fread(buf, 1, *len, infile) == 0)
+    fprintf(stderr, "Error with reading buf from %s\n", filename);
+  fclose(infile);
+  return buf;
+}
+
+/*
+* add by hwz
+* 该函数的功能。。。。。
+*/
+void split_ignore_list(char *buf, size_t len)
+{
+  int i;
+  for (i=0; i<len; i++) {
+    if (buf[i] == '\n')
+      buf[i] = ' ';
+  }
 }
 
 // add by hwz
@@ -70,6 +122,124 @@ static void mask_pan(char *s)
     if (j > 5 && j < strlen(s) - 4)
       s[j] = '*';
   }
+}
+
+/*
+* 打印更多与卡号相关的内容
+* add by hwz
+*/
+
+static void find_card(char *currfilename) {    
+    pid_t pid1;                                  
+    pid_t pid2;                                  
+    int fd[2];                                   
+                                                 
+    pipe(fd);                                    
+    pid1 = fork(); 
+    long num_1 = linenos[0]-1;
+    long num_2 = linenos[0]+1;
+    char vOut_1[50];
+    char vOut_2[50];
+    char awk_cmd[4096];
+    sprintf(vOut_1, " %d" , num_1);
+    sprintf(vOut_2, " %d" , num_2);
+    strcpy(awk_cmd,"NR < ");
+    strcat(awk_cmd,vOut_1);
+    strcat(awk_cmd, " { next } { print } NR == ");
+    strcat(awk_cmd,vOut_2);
+    strcat(awk_cmd, " { exit }");
+    //printf("awk_cmd: %s\n",awk_cmd);  
+                       
+                                                 
+    if(pid1==0)                                  
+    {                                            
+        close(fd[INPUT_END]);                    
+        dup2(fd[OUTPUT_END], STDIN_FILENO);      
+        close(fd[OUTPUT_END]);                   
+        execlp("strings", "strings", (char*) NULL);   
+    }                                            
+    else                                         
+    {                                            
+        pid2=fork();                             
+                                                 
+        if(pid2==0)                              
+        {                                        
+            close(fd[OUTPUT_END]);               
+            dup2(fd[INPUT_END], STDOUT_FILENO);  
+            close(fd[INPUT_END]);                
+            execlp("awk","awk",awk_cmd,currfilename,(char*) NULL); 
+        }                                        
+                                                 
+        close(fd[OUTPUT_END]);                   
+        close(fd[INPUT_END]);                    
+        waitpid(-1, NULL, 0);                    
+        waitpid(-1, NULL, 0);                    
+                                                
+    }                           
+}
+
+/*
+*  https://github.com/bigzeroo/adamcaudill-ccsrch/blob/master/ccsrch.c#L399
+*/
+char *stolower(char *buf)
+{
+  char *ptr = buf;
+
+  if (buf == NULL || strlen(buf) == 0)
+    return buf;
+
+  while ((*ptr = tolower(*ptr))) ptr++;
+  return buf;
+}
+
+char *get_filename_ext(const char *filename)
+{
+  char *slash = strrchr(filename, '/');
+  char *dot   = strrchr(slash, '.');
+  if(!dot || dot == slash)
+    return "";
+  return dot;
+}
+
+/*
+*
+* 该函数的功能是过滤某些文件名后缀,比如 .so, .jar, .a 等这些后缀的文件不进行卡数据扫描
+* 函数功能来自 https://github.com/bigzeroo/adamcaudill-ccsrch/blob/master/ccsrch.c#L621
+*/
+
+int is_allowed_file_type(const char *name)
+{
+  char  delim[] = ",";
+  char *exclude = NULL;
+  char *fname   = NULL;
+  char *result  = NULL;
+  char *ext     = NULL;
+  int   ret     = 0;
+
+  if (exclude_extensions == NULL)
+    return 0;
+
+  exclude = strdup(exclude_extensions);
+  fname   = strdup(name);
+  if (exclude == NULL || fname == NULL)
+    return 0;
+
+  ext     = get_filename_ext(fname);
+  stolower(ext);
+  if (ext != NULL && ext[0] != '\0') {
+    result = strtok(exclude, delim);
+    while (result != NULL) {
+      if (strcmp(result, ext) == 0) {
+        ret = 1;
+        break;
+      } else {
+        result = strtok(NULL, delim);
+      }
+    }
+  }
+  free(exclude);
+  free(fname);
+  return ret;
 }
 
 
@@ -96,10 +266,14 @@ print_result(char *cardname, int cardlen, long byte_offset)
   for (i = 0; i < cardlen; i++)
     nbuf[i] = cardbuf[i]+48;
 
+  // add by hwz
+  if (ignore && strstr(ignore, nbuf) != NULL)
+    return;
+
   memset(&buf,'\0',MAXPATH);
   memset(&basebuf,'\0',MDBUFSIZE);
   // add by hwz
-  mask_pan(nbuf);
+ // mask_pan(nbuf);
   // Show the filename of the archive if this file was extracted from somewhere
   if (extracted_parent[0] != 0) {
     strncpy(print_filename, extracted_parent, MAXPATH);
@@ -197,6 +371,7 @@ print_result(char *cardname, int cardlen, long byte_offset)
     fprintf(logfilefd, "%s\n", buf);
   else
     fprintf(stdout, "%s\n", buf);
+    find_card(currfilename);
 
   total_count++;
 
@@ -730,16 +905,18 @@ proc_dir_list(char *instr)
          * Easiest way to reliably check if two files are the same without
          * requiring any new libraries
          */
-        if (logfilename != NULL && fstat.st_dev == log_file_stat.st_dev && 
-                fstat.st_ino == log_file_stat.st_ino)
-            printf("Skipping log file: %s\n", curr_path);
-        else
-        {
-#ifdef DEBUG
-printf("Processing file %s\n",curr_path);
-#endif
-          ccsrch(curr_path);
-        }
+        if (is_allowed_file_type(curr_path) == 0) {
+            if (logfilename != NULL && fstat.st_dev == log_file_stat.st_dev && 
+                    fstat.st_ino == log_file_stat.st_ino)
+                printf("Skipping log file: %s\n", curr_path);
+            else
+            {
+    #ifdef DEBUG
+    printf("Processing file %s\n",curr_path);
+    #endif
+            ccsrch(curr_path);
+            }
+        }// ***
       }
     }
 #ifdef DEBUG
@@ -930,6 +1107,9 @@ cleanup_shtuff()
   if (tracksrch)
     fprintf(stdout, "Track data pattern matches->\t%d\n\n", trackdatacount);
   fprintf(stdout, "\nLocal end time: %s\n\n", ctime((time_t *)&end_time));
+  // add by hwz
+  if (ignore)
+    free(ignore);
 }
 
 void 
@@ -1016,6 +1196,7 @@ main(int argc, char *argv[])
   char          *tracktype_str=NULL;
   char          tmpbuf[4096];
   int           inlen = 0, err=0, c=0;
+  size_t      len;
 
   if (argc < 2)
     usage(argv[0]);
@@ -1032,7 +1213,7 @@ main(int argc, char *argv[])
   processing_xlsx = 0;
   processing_docx = 0;
 
-  while ((c = getopt(argc, argv,"befjt:To:s")) != -1)
+  while ((c = getopt(argc, argv,"befjti:Ton:s")) != -1)
   {
     switch (c)
     {
@@ -1040,11 +1221,12 @@ main(int argc, char *argv[])
       print_byte_offset=1;
       break;
     case 'e':
-      print_epoch_time=1;
+      print_epoch_time=1; 
       break;
     case 'f':
       print_filename_only=1;
       break;
+
     case 'j':
       print_julian_time=1;
       break;
@@ -1061,11 +1243,23 @@ main(int argc, char *argv[])
       else
         usage(argv[0]);
       break;
+
+    case 'i':
+      ignore = read_ignore_list(optarg, &len);
+      if (ignore)
+        split_ignore_list(ignore, len);
+      break;
+
     case 'T':
       tracksrch=1;
       tracktype1=1;
       tracktype2=1;
       break;
+    // add by hwz
+    case 'n':
+        exclude_extensions = stolower(optarg);
+        break;
+
     case 's':
       opt_shortcut = 1;
       break;
