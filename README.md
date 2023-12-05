@@ -176,6 +176,12 @@ Don't change the version numbers. If you have to change the them, do it in a sep
 
 ### Revisions
 
+1.2.4 (Dec. 5, 2023):
+* Added Print out the row where the card number is and the contents of the previous and next row of the row where the card number is,
+  so that you can quickly determine whether it is a real card number.
+* Added Ignore card number function and exclude suffix file scanning （These two functions come from the earliest version of ccsrch, and I added them here again.）
+  https://github.com/bigzeroo/adamcaudill-ccsrch/blob/master/ccsrch.c
+
 1.2.3 (Oct. 8, 2012):
 
 * Added Windows installation instructions
