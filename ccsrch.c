@@ -74,8 +74,8 @@ initialize_buffer()
 
 /*
 * add by hwz
-* 该函数的功能是加白误报的卡号信息；比如某些号码被识别成卡号，下次扫描不想再被扫描出来，就将卡号放在 ignore.list文件中，扫描的时候加 -i ignore.list
-*
+* Ignore card number information that has been scanned and is considered a false positive
+* If you don’t want to be scanned out again during the next scan, just put the card number in the ignore.list file and add -i ignore.list when scanning.
 */
 char *read_ignore_list(const char *filename, size_t *len)
 {
@@ -101,7 +101,6 @@ char *read_ignore_list(const char *filename, size_t *len)
 
 /*
 * add by hwz
-* 该函数的功能。。。。。
 */
 void split_ignore_list(char *buf, size_t len)
 {
@@ -125,7 +124,8 @@ static void mask_pan(char *s)
 }
 
 /*
-* 打印更多与卡号相关的内容
+* Print out the row where the card number is and the contents of the previous and next row of the row where the card number is,
+* so that you can quickly determine whether it is a real card number.
 * add by hwz
 */
 
@@ -203,8 +203,9 @@ char *get_filename_ext(const char *filename)
 
 /*
 *
-* 该函数的功能是过滤某些文件名后缀,比如 .so, .jar, .a 等这些后缀的文件不进行卡数据扫描
-* 函数功能来自 https://github.com/bigzeroo/adamcaudill-ccsrch/blob/master/ccsrch.c#L621
+* The function of this function is to filter certain file name suffixes, such as .so, .jar, .a and other suffixes, and do not scan the card data.
+* Function functionality comes from:
+*   https://github.com/bigzeroo/adamcaudill-ccsrch/blob/master/ccsrch.c#L621
 */
 
 int is_allowed_file_type(const char *name)
@@ -1145,6 +1146,8 @@ usage(char *progname)
   printf("    -t <1 or 2>\t   Check if the pattern follows either a Track 1 \n\t\t   or 2 format\n");
   printf("    -s\t\t   Stop parsing a file as soon as CHD is found\n");
   printf("    -T\t\t   Check for both Track 1 and Track 2 patterns\n");
+  printf("    -n <list>      File extensions to exclude (i.e .dll,.exe)\n");
+  printf("    -i <filename>  Ignore credit card numbers in this list (test cards)\n");
 
   printf("    -h\t\t   This stuff\n\n");
   printf("Please see the README file for a description of how this program works.\n\n");
