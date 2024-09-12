@@ -303,7 +303,7 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY 
  
 You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-##程序的逻辑以及整体流程<br>
+## 程序的逻辑以及整体流程<br>
 ccsrch.c和mods.c这两个C语言代码文件组成了ccsrch程序的源代码，它们共同工作来执行文件系统中的信用卡信息扫描任务。结合这两个代码文件，我们可以详细分析整个程序的执行流程和逻辑结构。
 
 1. 程序的整体目标
@@ -410,7 +410,7 @@ PDF 和文档文件解析：
 6. 总结
 ccsrch程序结合了ccsrch.c和mods.c文件的功能，实现了一个功能强大、灵活、高效的信用卡信息扫描工具。通过递归扫描目录、检测文件类型、解压缩和解析特定类型的文件，该程序能够在各种文件格式和环境下识别潜在的信用卡信息，并提供详细的扫描结果和统计信息。
 
-##代码的调用关系以及执行逻辑<br>
+## 代码的调用关系以及执行逻辑<br>
 
 ccsrch 程序的详细执行流程
 1. 程序入口 (main 函数)
