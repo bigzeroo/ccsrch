@@ -412,7 +412,6 @@ ccsrch程序结合了ccsrch.c和mods.c文件的功能，实现了一个功能强
 
 ##代码的调用关系以及执行逻辑<br>
 
-```plaintext
 ccsrch 程序的详细执行流程
 1. 程序入口 (main 函数)
 程序的入口是main函数：
@@ -525,7 +524,7 @@ process_cleanup()：用于在接收到信号时调用的清理函数。调用cle
 
 12. 信号处理 (signal_proc 函数)
 signal_proc()：设置信号处理程序，确保在接收到SIGHUP、SIGTERM、SIGINT、SIGQUIT等信号时调用process_cleanup()进行清理操作.
-```
+
 
 ## 函数调用关系图
 ```plaintext
