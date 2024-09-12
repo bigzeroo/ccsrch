@@ -423,16 +423,19 @@ ccsrch 程序的详细执行流程
 调用check_dir()函数检查输入路径是否是目录。
 如果是目录，则调用proc_dir_list()递归扫描该目录及其子目录中的所有文件。
 如果是文件，则直接调用ccsrch()函数扫描该文件。
+
 2. 初始化模块 (initialise_mods 函数)
 initialise_mods()：初始化一些全局变量和状态。
 调用getcwd()获取当前工作目录。
 设置skipchars为空，并调用reset_skip_chars()初始化跳过字符集（如空格、换行符等）。
 清空计数器，如skipped_executable_count、extracted_archive_count。
 初始化与解压缩文件处理相关的变量，如extracted_parent和filetype_parent。
+
 3. 检查输入路径 (check_dir 函数)
 check_dir(char *name)：检查输入路径是否为目录。
 调用opendir()尝试打开目录。
 如果打开成功，返回1表示是目录；否则返回0表示是文件。
+
 4. 递归扫描目录 (proc_dir_list 函数)
 proc_dir_list(char *instr)：递归扫描指定目录中的所有文件和子目录。
 使用opendir()打开目录，readdir()读取每个目录项。
@@ -441,10 +444,12 @@ proc_dir_list(char *instr)：递归扫描指定目录中的所有文件和子目
 如果是普通文件，则调用ccsrch()对文件进行扫描。
 检查文件类型，使用is_allowed_file_type()判断文件是否被排除在外。
 对每个文件调用ccsrch()函数进行信用卡号扫描。
+
 5. 获取文件状态 (get_file_stat 函数)
 get_file_stat(char *inputfile, struct stat *fileattr)：获取文件的状态信息。
 调用stat()函数获取文件状态，将状态信息存储在fileattr中。
 返回0表示成功，返回-1表示失败。
+
 6. 文件扫描和信用卡号检测 (ccsrch 函数)
 ccsrch(char *filename)：核心扫描函数，用于对文件内容进行信用卡号检测。
 调用fopen()以二进制模式打开文件，获取文件描述符infd。
@@ -462,11 +467,13 @@ DOCX：parse_docx(filename, false)
 使用buf_strstr()函数查找潜在的信用卡号模式，逐字符进行扫描。
 如果检测到潜在的信用卡号，调用luhn_check()函数执行Luhn算法验证其合法性。
 对每个验证通过的信用卡号，调用print_result()函数输出结果。
+
 7. 文件类型检测 (detect_file_type 函数)
 detect_file_type(char *filename)：检测文件的类型。
 调用pipe_and_fork()创建管道和子进程，用于执行file命令来获取文件类型信息。
 解析file命令的输出，以确定文件的类型（如ASCII文本、PDF、ZIP、GZIP等）。
 返回相应的文件类型枚举值（file_type）。
+
 8. 解压缩和解析文件 (mods.c 中的解压缩和解析函数)
 unzip_and_parse(char *filename)：解压缩ZIP文件并解析其内容。
 
@@ -500,18 +507,22 @@ parse_docx(char *filename, bool ods)：解析DOCX文件。
 
 类似于XLSX文件的处理方式，将DOCX文件作为ZIP文件解压缩并提取XML内容。
 调用ccsrch()扫描提取的XML文件。
+
 9. 打印结果 (print_result 函数)
 print_result(char *cardname, int cardlen, long byte_offset)：打印和记录扫描结果。
 生成包含文件名、信用卡号、字节偏移量等信息的结果字符串。
 根据选项决定输出到标准输出还是日志文件。
 调用find_card()函数查找文件中包含卡号的行。
+
 10. 查找文件中的卡号行 (find_card 函数)
 find_card(char *currfilename)：使用awk和strings命令查找文件中包含卡号的行。
 创建管道和子进程，调用strings命令提取文本数据。
 使用awk命令提取包含卡号的行及其前后行，以便更好地确认卡号的真实性。
+
 11. 结束处理和清理 (cleanup_shtuff 和 process_cleanup 函数)
 cleanup_shtuff()：清理操作，包括输出扫描统计信息和释放动态分配的内存。
 process_cleanup()：用于在接收到信号时调用的清理函数。调用cleanup_shtuff()并关闭日志文件。
+
 12. 信号处理 (signal_proc 函数)
 signal_proc()：设置信号处理程序，确保在接收到SIGHUP、SIGTERM、SIGINT、SIGQUIT等信号时调用process_cleanup()进行清理操作.
 ```
